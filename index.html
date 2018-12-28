@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<!-- Meta, title, CSS, favicons, etc. -->
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<title>权限管理</title>
+		<link href="https://cdn.bootcss.com/twitter-bootstrap/3.4.0/css/bootstrap.min.css" rel="stylesheet">
+		<style type="text/css">
+		*{margin: 0;padding: 0;} 
+		.container {
+		    width: 100%;
+		    padding: 0;
+		}
+		.flex-box {
+		    display: flex;
+		}
+		.flex-1 {
+		    flex: 1;
+		}
+		.flex-box.col {
+		    flex-direction: column;
+		}
+		.zx-auth-wrap {
+		  background: #fff;
+		  height: 100vh;
+		}
+		.zx-auth-wrap .left {
+		  width: 320px;
+		  max-width: 100%;
+		  overflow: auto;
+		}
+		.zx-auth-wrap .left ul {
+		  padding-left: 20px;
+		}
+		.zx-auth-wrap .left > ul {
+		  padding-left: 0;
+		}
+		.zx-auth-wrap .left > ul:last-child > li:last-child {
+		  position: relative;
+		}
+		.zx-auth-wrap .left > ul:last-child > li:last-child:after {
+		  position: absolute;
+		  left: 0;
+		  bottom: 0;
+		  content: "";
+		  display: block;
+		  border-bottom: 1px solid #ddd;
+		  width: 100%;
+		}
+		.zx-auth-wrap .left li {
+		  list-style: none;
+		  line-height: 25px;
+		  border-left: 1px solid #ddd;
+		}
+		.zx-auth-wrap .left li div.active {
+		  background: rgba(0, 179, 255, 0.19);
+		}
+		.zx-auth-wrap .left .flex-box {
+		  position: relative;
+		  border-bottom: 1px solid #ddd;
+		  padding: 10px 0 10px 10px;
+		}
+		.zx-auth-wrap .left .flex-box .btn {
+		  padding: 4px 5px;
+		  position: absolute;
+		  right: 0;
+		  top: 10px;
+		  display: none;
+		}
+		.zx-auth-wrap .left .flex-box:hover .btn {
+		  display: block;
+		}
+		.zx-auth-wrap .left .inline-block {
+		  user-select: none;
+		  -webkit-user-select: none;
+		  padding: 0 5px;
+		  display: inline-block;
+		  cursor: pointer;
+		  width: 80%;
+		}
+		.zx-auth-wrap .left .tree-select {
+		  width: 13px;
+		  height: 13px;
+		  line-height: 16px;
+		  margin: 3px;
+		  display: inline-block;
+		  vertical-align: middle;
+		  border: 0 none;
+		  cursor: pointer;
+		  outline: none;
+		  background-color: transparent;
+		  background-repeat: no-repeat;
+		  background-attachment: scroll;
+		  background-image: url('selects.png');
+		  position: relative;
+		}
+		.zx-auth-wrap .left .tree-select:after {
+		  content: "";
+		  display: block;
+		  position: absolute;
+		  left: -5px;
+		  top: -5px;
+		  bottom: -5px;
+		  right: -5px;
+		}
+		.zx-auth-wrap .left .tree-select-none {
+		  background: none;
+		}
+		.zx-auth-wrap .left .tree-select-add {
+		  background-position: -77px -3px;
+		}
+		.zx-auth-wrap .left .tree-select-decr {
+		  background-position: -94px -3px;
+		}
+		.zx-auth-wrap .left .tree-select-null {
+		  background-position: 0 0;
+		}
+		.zx-auth-wrap .left .tree-select-full {
+		  background-position: -14px 0;
+		}
+		.zx-auth-wrap .left .tree-select-half {
+		  background-position: -14px -28px;
+		}
+		.zx-auth-wrap .right {
+		  overflow: auto;
+		  padding: 15px;
+		}
+		.zx-auth-wrap .right .zx-auth_bar {
+		  margin: 0 10px 5px 0;
+		  display: inline-block;
+		  line-height: 26px;
+		  height: 28px;
+		  font-size: 12px;
+		  padding: 0 10px;
+		  background: #fff;
+		  color: #666;
+		  cursor: pointer;
+		  user-select: none;
+		  -webkit-user-select: none;
+		  border: 1px solid #cbcbcb;
+		}
+		.zx-auth-wrap .right .zx-auth_bar.active {
+		  border-color: #1abd8c;
+		  color: #fff;
+		  background: #1abd8c;
+		}
+		</style>
+
+		<script src="https://cdn.bootcss.com/vue/2.4.2/vue.js"></script>
+	</head>
+
+	<body class="nav-md default-theme" style="overflow: hidden;">
+		
+		<!-- 递归引用的模板 -->
+		<template id="one-select" style="display: none;">
+			<ul>
+				<li>
+					<div class="flex-box">
+						<!--<span style="display: none;">{{item}}</span>
+						<span style="display: none;">{{key}}</span>-->
+						<div v-on:click="nodeClick(tree, index)" v-bind:class="[!tree.nodes? 'tree-select-none' : !tree.selected? 'tree-select-add' : 'tree-select-decr', 'tree-select', 'inline-block']"></div>
+						<div v-on:click="nodeAllClick(tree, index)" v-bind:class="[!tree.checkAll? 'tree-select-null' : (tree.checkAll == 'half' ? 'tree-select-half' : 'tree-select-full'), 'tree-select', 'inline-block']"></div>
+
+						<div v-if="!tree.nodes" @click="setChildData(tree)" class="inline-block flex-1" :class="tree.active">{{ tree.text }}</div>
+						<div v-else @click="setChildData(tree)" class="inline-block">{{ tree.text }}</div>
+						
+						<!--<div v-on:click="nodeAllClick(tree, index)" v-bind:class="[!tree.nodes? 'tree-select-none' : !tree.selected? 'tree-select-add' : 'tree-select-decr', 'tree-select', 'inline-block']"></div>-->
+						<span v-if="tree.nodes && tree.nodes.length>0" class="btn btn-success" @click="slideAll(tree)">{{tree.showAll?'收起': '展开'}}</span>
+					</div>
+					<div v-show="tree.selected && tree.nodes && tree.nodes.length>0" >
+						<one-select v-for="(item, index2) in tree.nodes" :key="index2" v-bind:tree="item" v-bind:index="index2" v-bind:isroot="false" :set-data="setData" :set-auth="setAuth"></one-select>
+					</div>
+				</li>
+			</ul>
+		</template>
+		<div class="container body" id="app">
+			<div class="main_container">
+				
+				<!-- page content -->
+				<div class="right_col" role="main" style="padding: 0;">
+					<!-- 内容区start -->
+					<!--<div class="row bread-tab">
+						<span>您的位置：</span>
+						<a href="index.html">首页</a>
+						<span class="iconfont icon-enter"></span>
+						<a href="news.html">众行新闻</a>
+						<span class="iconfont icon-enter"></span>
+						<span>文章详情</span>
+					</div>-->
+					
+					
+					<div class="flex-box col zx-auth-wrap">
+						<div class="flex-box flex-1" style="">
+							<div class="left" style="border-right: 1px solid #ddd;">
+								<one-select v-for="(item, index) in tree" :key="index" v-bind:isroot="true" v-bind:tree="item" v-bind:index="index" v-bind:set-data="setData" :set-auth="setAuth"></one-select>
+								
+								
+								
+							</div>
+							<div class="right flex-1">
+								<div class="flex-box col" style="height: 100%;">
+									<div class="flex-1">
+										<span class="zx-auth_bar" v-for="(item, index) in selectNode.auths||[]" @click="setAuth(item)" :key="index" :class="Number.isInteger(item.selected)?'active': ''">{{item.text}}</span>
+										
+									</div>
+									<div class="flex-1">
+										<span class="zx-auth_bar active" v-for="(item, index) in result||[]" :key="index">{{item.text}}</span>
+										{{result}}
+									</div>
+									
+								</div>
+								<!--{{selectNode}}-->
+							</div>
+						</div>
+						<div class="row text-right" style="padding: 15px;border-top: 1px solid #ddd;">
+							
+							<button @click="getResult" class="btn btn-primary">获取选中数据</button>
+						</div>
+					</div>
+					
+					
+					
+					
+					<!-- 内容区end -->
+				</div>
+				<!-- /page content -->
+
+			</div>
+		</div>
+		<script>
+			// 初始数据
+//			var treeDataJSON = document.getElementById("treeDataJSON").value;
+//			var treeData = JSON.parse(treeDataJSON);
+			Vue.component('one-select', {
+				name: 'one-select',
+				template: '#one-select',
+				props: {'tree': Object, 'isroot': Boolean, 'index': Number|String,
+		            setData: {
+		                type: Function,
+		                default: undefined,
+		                require: false
+		            }, 
+		            setAuth: {
+		            	type: Function,
+		                default: undefined,
+		                require: false
+		            }
+				},
+				created: function() {
+					var realTree = Object.assign({}, this.tree);
+					delete realTree.selected;
+					if(Object.keys(realTree).length === 0) { // 判断最低级，再刷新父级
+						this.refreshAllParentNodes(this.$parent);
+					}
+					
+				},
+				methods: {
+					setChildData: function(node) {
+						Vue.set(node, 'active', node.active?'': 'active');
+						this.setData(node);
+					},
+					nodeClick: function(node, index) {
+						if(node.selected) {
+							Vue.set(node, 'selected', null);
+						} else {
+							Vue.set(node, 'selected', 'full');
+						}
+						this.$nextTick(()=>{
+							this.refreshAllParentNodes(this.$parent);
+							this.refreshAllSonNodes(this, node.checkAll);
+							
+						})
+					},
+					slideAll: function(node) {
+						if(node.showAll) {
+							Vue.set(node, 'selected', null);
+							Vue.set(node, 'showAll', null);
+						} else {
+							Vue.set(node, 'selected', 'full');
+							Vue.set(node, 'showAll', 'all');
+						}
+						
+						this.$nextTick(()=>{
+							this.$children.map(item=>{
+								item.tree.showAll = !node.showAll;
+								item.slideAll(item.tree);
+							})
+						})
+					},
+					nodeAllClick: function(node, index) {
+						var status = null;
+						/*
+						if(!(node.checkAll === 'full' || node.checkAll === 'half')) {
+							status = 'full';
+						}
+						Vue.set(node, 'checkAll', status);*/
+						if(node.checkAll === 'full' || node.checkAll === 'half') {
+							Vue.set(node, 'checkAll', null);
+						} else {
+							Vue.set(node, 'checkAll', 'full');
+							status = 'full';
+						}
+						this.refreshChildCheck(node, status);
+//						this.refreshAllParentNodes(self.$parent);
+						this.refreshAllParentNodes(this.$parent);
+						this.refreshAllSonNodes(this, node.checkAll);
+					},
+					refreshChildCheck: function(node, status) {
+						node.auths && node.auths.map((item, key) => {
+							if(Number.isInteger(item.selected) && !status) {
+								this.setAuth(item);
+							}
+							if(!Number.isInteger(item.selected) && status == 'full') {
+								this.setAuth(item);
+							}
+						});
+						this.$children.map(item=>{
+							item.refreshChildCheck(item.tree, status);
+						})
+					},
+					refreshCheck: function() {
+						this.refreshAllParentNodes(this.$parent);
+						this.refreshAllSonNodes(this, this.checkAll);
+						this.$children.map(item=>{
+							item.refreshCheck();
+						})
+					},
+					refreshAllSonNodes: function(node, status) {
+						if(node instanceof Vue && node.$children.length) {
+							for(index in node.$children) {
+								Vue.set(node.$children[index].tree, 'checkAll', status);
+								// 递归计算子级
+								this.refreshAllSonNodes(node.$children[index], status);
+							}
+						}
+//						else if(node instanceof Vue){
+//							Vue.set(node.tree, 'checkAll', status);
+//						}
+					},
+					refreshAllParentNodes: function(node) {
+						if(node instanceof Vue) {
+							var status = null;
+							var nullCount = 0;
+							var halfCount = 0;
+							var fullCount = 0;
+							for(index in node.$children) {
+								if(typeof node.$children[index].tree.checkAll === 'undefined') {
+									nullCount++;
+								} else if(node.$children[index].tree.checkAll === null) {
+									nullCount++;
+								} else if(node.$children[index].tree.checkAll === 'half') {
+									halfCount++;
+								} else if(node.$children[index].tree.checkAll === 'full') {
+									fullCount++;
+								}
+							}
+//							if(node.$children.length>0){
+								if(fullCount === node.$children.length) {
+									status = 'full';
+								} else if(nullCount === node.$children.length) {
+									status = null;
+								} else {
+									status = 'half';
+								}
+								Vue.set(node.tree, 'checkAll', status);
+								// 递归计算父级
+//							}
+							this.refreshAllParentNodes(node.$parent);
+//							else {
+//								status = node.tree.checkAll?'': 'full';
+//								Vue.set(node.tree, 'checkAll', status);
+//							}
+
+						}
+					},
+					log: function(o) {
+						console.log(o);
+					}
+				}
+			});
+			vm = new Vue({
+				el: '#app',
+				methods: {
+					// 返回最终数据
+					getResult: function() {
+						console.log(JSON.stringify(this.result));
+						return Object.assign({}, this.tree);
+					},
+					setData: function(node) {
+						//删除上次选择的节点
+						this.selectNode.active = '';
+						//缓存选中的节点
+						this.selectNode = node;
+					},
+					setAuth: function(item) {
+//						console.log(JSON.stringify(item))
+						if(!Number.isInteger(item.selected)) {
+							Vue.set(item, 'selected', 1);
+							Vue.set(this.result, 'sel'+item.value, item);
+//							this.result['sel'+item.value] = item;
+						} else {
+//							delete this.result['sel'+item.value];//这种方式数据不响应
+							Vue.delete(this.result, 'sel'+item.value);
+							Vue.set(item, 'selected', '');
+						}
+						//判断是否选中
+						/*var count = 0;
+						this.selectNode.auths.map(item => {
+							if(Number.isInteger(item.selected)){
+								count++;
+							}
+						});
+						if(count == this.selectNode.auths.length){
+							this.selectNode.checkAll = 'full';
+						}else if(count==0){
+							this.selectNode.checkAll = '';
+						}else{
+							this.selectNode.checkAll = 'half';
+						}*/
+						//检查所有节点，选中情况
+						/*this.$children.map(item=>{
+							item.refreshCheck();
+						})*/
+					}
+				},
+				data: {
+					selectNode: '',
+					lastNode: '',
+					result: {},
+					tree: [{
+							"text": "重庆市",
+							"value": "01001",
+							"selected": false,
+							"nodes": [
+								{
+									"text": "权限1",
+									"value": "01300312",
+									"selected": false,
+									"checkAll": 'full',
+									"nodes": null,
+									"auths": [{"text": "用户管理", "value": 10011},{"text": "订单管理", "value": 10021},{"text": "商品管理", "value": 10012},{"text": "订单管理", "value": 10022},{"text": "商品管理", "value": 10013},{"text": "订单管理", "value": 10023},{"text": "商品管理", "value": 10014},{"text": "订单管理", "value": 10024}]
+								},
+								{
+									"text": "权限2",
+									"value": "03200322",
+									"selected": false,
+									"nodes": null,
+									"auths": [{"text": "商品详情", "value": 10215},{"text": "添加商品", "value": 10225}]
+								}
+							
+							]
+						}, {
+							"text": "北京市北京市北京市北京市北京市北京市北京市北京市北京市",
+							"value": "02002",
+							"selected": false,
+							"nodes": null,
+							"auths": [{"text": "商品管理", "value": 10016},{"text": "订单管理", "value": 10026},{"text": "商品管理", "value": 10017},{"text": "订单管理", "value": 10027},{"text": "商品管理", "value": 10018},{"text": "订单管理", "value": 10028},{"text": "商品管理", "value": 10019},{"text": "订单管理", "value": 10029}]
+						},
+						{
+							"text": "重庆市2",
+							"value": "01001",
+							"selected": false,
+							"nodes": null,
+							"auths": [{"text": "商品管理", "value": 100111},{"text": "订单管理", "value": 100211},{"text": "商品管理", "value": 100112},{"text": "订单管理", "value": 100212},{"text": "商品管理", "value": 100113},{"text": "订单管理", "value": 100213},{"text": "商品管理", "value": 100114},{"text": "订单管理", "value": 100214}]
+						}, {
+							"text": "北京市2",
+							"value": "02002",
+							"selected": false,
+							"nodes": null,
+							"auths": [{"text": "商品管理", "value": 100115},{"text": "订单管理", "value": 100215},{"text": "商品管理", "value": 100116},{"text": "订单管理", "value": 100216},{"text": "商品管理", "value": 100117},{"text": "订单管理", "value": 100217},{"text": "商品管理", "value": 100118},{"text": "订单管理", "value": 100218}]
+						},{
+							"text": "北京市4",
+							"value": "02002",
+							"selected": false,
+							"nodes": null,
+							"auths": [{"text": "商品管理", "value": 100119},{"text": "订单管理", "value": 100219},{"text": "商品管理", "value": 100120},{"text": "订单管理", "value": 100220},{"text": "商品管理", "value": 100121},{"text": "订单管理", "value": 100221},{"text": "商品管理", "value": 100122},{"text": "订单管理", "value": 100222}]
+						}, {
+							"text": "四川",
+							"value": "028",
+							"selected": false,
+							"nodes": [
+								{
+									"text": "成都市",
+									"value": "03003",
+									"selected": false,
+									"nodes": [
+										{
+											"text": "武侯区",
+											"value": "030032",
+											"selected": false,
+											"nodes": null,
+											"auths": [{"text": "商品管理", "value": 100123},{"text": "订单管理", "value": 100223},{"text": "商品管理", "value": 100124},{"text": "订单管理", "value": 100224},{"text": "商品管理", "value": 100125},{"text": "订单管理", "value": 100225},{"text": "商品管理", "value": 100126},{"text": "订单管理", "value": 100226}]
+										}
+									]
+								},
+								{
+									"text": "内江市",
+									"value": "0300123",
+									"selected": false,
+									"nodes": [
+										{
+											"text": "市中区",
+											"value": "0300312",
+											"selected": false,
+											"nodes": [
+												{
+													"text": "市中区",
+													"value": "0300312",
+													"selected": false,
+													"nodes": null
+												},
+												{
+													"text": "东兴区",
+													"value": "0300322",
+													"selected": false,
+													"nodes": null
+												}
+											]
+										},
+										{
+											"text": "东兴区",
+											"value": "0300322",
+											"selected": false,
+											"nodes": [
+												{
+													"text": "市中区",
+													"value": "0300312",
+													"selected": false,
+													"nodes": null
+												},
+												{
+													"text": "东兴区",
+													"value": "0300322",
+													"selected": false,
+													"nodes": null
+												}
+											]
+										}
+									]
+								},
+								{
+									"text": "绵阳市",
+									"value": "0300123",
+									"selected": false,
+									"nodes": [
+										{
+											"text": "市中区",
+											"value": "0300312",
+											"selected": false,
+											"nodes": [
+												{
+													"text": "市中区",
+													"value": "0300312",
+													"selected": false,
+													"nodes": null
+												},
+												{
+													"text": "东兴区",
+													"value": "0300322",
+													"selected": false,
+													"nodes": null
+												}
+											]
+										},
+										{
+											"text": "东兴区",
+											"value": "0300322",
+											"selected": false,
+											"nodes": [
+												{
+													"text": "市中区",
+													"value": "0300312",
+													"selected": false,
+													"nodes": null
+												},
+												{
+													"text": "东兴区",
+													"value": "0300322",
+													"selected": false,
+													"nodes": null
+												}
+											]
+										}
+									]
+								}
+							]
+						}],
+				},
+			});
+		</script>
+	</body>
+</html>
